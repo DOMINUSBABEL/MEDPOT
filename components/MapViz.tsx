@@ -5,11 +5,18 @@ import { Plus, Minus, Maximize, MousePointer2, Printer } from 'lucide-react';
 interface MapVizProps {
   data: UrbanZone[];
   zoneStatuses: Map<string, ZoneStatus>;
+  activeLayers: {
+    limiteMunicipal: boolean;
+    barrios: boolean;
+    hidrografia: boolean;
+    poligonos: boolean;
+    expansion: boolean;
+    riesgo: boolean;
+  };
 }
 
-export const MapViz: React.FC<MapVizProps> = ({ data, zoneStatuses }) => {
+export const MapViz: React.FC<MapVizProps> = ({ data, zoneStatuses, activeLayers }) => {
   const [hoveredZone, setHoveredZone] = useState<UrbanZone | null>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const getColor = (zoneId: string) => {
     const status = zoneStatuses.get(zoneId);
@@ -21,17 +28,8 @@ export const MapViz: React.FC<MapVizProps> = ({ data, zoneStatuses }) => {
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent, zone: UrbanZone) => {
-    const rect = (e.target as Element).getBoundingClientRect();
-    setMousePos({
-      x: rect.left + window.scrollX,
-      y: rect.top + window.scrollY - 100 // Offset upward
-    });
-    setHoveredZone(zone);
-  };
-
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[#dfe6ed] group">
+    <div className="w-full h-full relative overflow-hidden bg-[#dde3ea] group">
       {/* 1. Map Canvas (SVG) */}
       <svg 
         className="w-full h-full pointer-events-none md:pointer-events-auto"
@@ -39,71 +37,112 @@ export const MapViz: React.FC<MapVizProps> = ({ data, zoneStatuses }) => {
         preserveAspectRatio="xMidYMid slice"
       >
         <defs>
-          <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="0.5"/>
+          {/* Pattern for Grid (Barrios) */}
+          <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
+            <path d="M 8 0 L 0 0 0 8" fill="none" stroke="#94a3b8" strokeWidth="0.1"/>
+          </pattern>
+          {/* Pattern for Risk Zones (Hatching) */}
+          <pattern id="hatch-risk" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="4" stroke="#f87171" strokeWidth="1.5" opacity="0.6" />
+          </pattern>
+          {/* Pattern for Expansion Zones (Dots) */}
+          <pattern id="dots-expansion" width="2" height="2" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.5" fill="#3b82f6" opacity="0.6" />
           </pattern>
         </defs>
 
-        {/* Background Grid */}
-        <rect width="100%" height="100%" fill="url(#grid)" />
+        {/* 1. Limite Municipal (City Outline) */}
+        {activeLayers.limiteMunicipal && (
+          <path 
+            d="M20,10 L45,5 L80,15 L95,40 L85,85 L50,95 L15,85 L5,45 Z" 
+            fill="white" 
+            stroke="#cbd5e1" 
+            strokeWidth="0.5"
+            filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.05))"
+          />
+        )}
 
-        {/* Aburrá Valley Geography (Stylized) */}
-        {/* Mountains (Side slopes) */}
-        <path d="M0,0 L30,0 L20,30 L0,50 Z" fill="#cbd5e1" opacity="0.3" />
-        <path d="M70,0 L100,0 L100,60 L80,40 Z" fill="#cbd5e1" opacity="0.3" />
-        <path d="M0,80 L20,100 L0,100 Z" fill="#cbd5e1" opacity="0.3" />
-        
-        {/* River Medellín (South to North) */}
-        <path 
-          d="M60,105 C55,80 58,60 50,45 S40,20 45,-5" 
-          fill="none" 
-          stroke="#93c5fd" 
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
+        {/* 2. Barrios y Veredas (Grid Mesh) */}
+        {activeLayers.barrios && activeLayers.limiteMunicipal && (
+          <path 
+            d="M20,10 L45,5 L80,15 L95,40 L85,85 L50,95 L15,85 L5,45 Z" 
+            fill="url(#grid)" 
+            opacity="0.4"
+          />
+        )}
 
-        {/* Main Highway (Regional) */}
-        <path 
-          d="M62,105 C57,80 60,60 52,45 S42,20 47,-5" 
-          fill="none" 
-          stroke="#ffffff" 
-          strokeWidth="1.5"
-          opacity="0.6"
-        />
+        {/* 3. Zonas de Riesgo (Laderas) */}
+        {activeLayers.riesgo && (
+          <g>
+            {/* Ladera Oriental */}
+            <path d="M75,20 L90,40 L85,75 L70,55 Z" fill="url(#hatch-risk)" stroke="#fca5a5" strokeWidth="0.2" />
+            {/* Ladera Occidental */}
+            <path d="M15,30 L25,25 L35,50 L20,70 Z" fill="url(#hatch-risk)" stroke="#fca5a5" strokeWidth="0.2" />
+          </g>
+        )}
 
-        {/* Zones (Data Points) */}
-        {data.map((zone) => {
+        {/* 4. Áreas de Expansión (Bordes) */}
+        {activeLayers.expansion && (
+          <g>
+            {/* Pajarito / Robledo Expansion */}
+            <path d="M10,25 L20,20 L25,35 L15,40 Z" fill="url(#dots-expansion)" stroke="#60a5fa" strokeWidth="0.2" />
+            {/* San Antonio de Prado Expansion */}
+            <path d="M25,80 L40,85 L35,92 L20,88 Z" fill="url(#dots-expansion)" stroke="#60a5fa" strokeWidth="0.2" />
+          </g>
+        )}
+
+        {/* 5. Hidrografía (Río Medellín y Quebradas) */}
+        {activeLayers.hidrografia && (
+          <g>
+            {/* Río Medellín (Sur-Norte) */}
+            <path 
+              d="M55,95 C50,70 58,50 48,25 S42,10 45,5" 
+              fill="none" 
+              stroke="#60a5fa" 
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+            {/* Quebrada Santa Elena */}
+            <path d="M80,45 Q65,50 53,40" fill="none" stroke="#93c5fd" strokeWidth="0.6" strokeDasharray="1,0.5" />
+            {/* Quebrada La Iguaná */}
+            <path d="M20,40 Q35,45 49,35" fill="none" stroke="#93c5fd" strokeWidth="0.6" strokeDasharray="1,0.5" />
+          </g>
+        )}
+
+        {/* 6. Polígonos de Tratamiento (Data Points) */}
+        {activeLayers.poligonos && data.map((zone) => {
           const color = getColor(zone.id);
           const status = zoneStatuses.get(zone.id);
-          const isOptimized = status === ZoneStatus.OPTIMIZED;
-          const isLocked = status === ZoneStatus.LOCKED;
           const isHovered = hoveredZone?.id === zone.id;
           
           return (
             <g 
               key={zone.id} 
-              onMouseEnter={(e) => handleMouseMove(e as any, zone)}
+              onMouseEnter={() => setHoveredZone(zone)}
               onMouseLeave={() => setHoveredZone(null)}
               className="cursor-pointer pointer-events-auto"
               style={{ transition: 'all 0.3s ease' }}
             >
-              {/* Outer Glow for specific statuses */}
-              {isOptimized && (
-                <circle cx={zone.coordinates.x} cy={zone.coordinates.y} r={4} fill={color} opacity="0.2" className="animate-pulse" />
-              )}
-              {isLocked && (
-                <circle cx={zone.coordinates.x} cy={zone.coordinates.y} r={3.5} fill={color} opacity="0.1" />
-              )}
-
-              {/* Main Zone Marker */}
+              {/* Radius / Area of influence */}
               <circle
                 cx={zone.coordinates.x}
                 cy={zone.coordinates.y}
-                r={isHovered ? 2 : 1.5}
+                r={isHovered ? 4 : 3}
+                fill={color}
+                opacity="0.15"
+                stroke={color}
+                strokeWidth="0.1"
+              />
+
+              {/* Core Marker */}
+              <circle
+                cx={zone.coordinates.x}
+                cy={zone.coordinates.y}
+                r={isHovered ? 1.8 : 1.2}
                 fill={color}
                 stroke="white"
-                strokeWidth="0.3"
-                opacity="0.8"
+                strokeWidth="0.5"
+                opacity="0.9"
                 className="transition-all duration-300"
               />
               
@@ -113,7 +152,7 @@ export const MapViz: React.FC<MapVizProps> = ({ data, zoneStatuses }) => {
                 cy={zone.coordinates.y}
                 r={0.4}
                 fill="white"
-                opacity="0.5"
+                opacity="0.8"
               />
             </g>
           );
@@ -144,25 +183,43 @@ export const MapViz: React.FC<MapVizProps> = ({ data, zoneStatuses }) => {
       </div>
 
       {/* 3. Legend (Bottom Left) */}
-      <div className="absolute bottom-10 left-4 bg-white/95 backdrop-blur-sm border border-slate-300 p-3 rounded-md shadow-md">
+      <div className="absolute bottom-10 left-4 bg-white/95 backdrop-blur-sm border border-slate-300 p-3 rounded-md shadow-md shadow-slate-200/50">
          <h4 className="font-bold text-xs text-slate-800 mb-2 border-b border-slate-100 pb-1">Convenciones</h4>
          <div className="space-y-2 text-xs text-slate-600">
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 rounded-full bg-red-500 border border-white shadow-sm"></div>
-             <span>Bloqueo Normativo</span>
-           </div>
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 rounded-full bg-emerald-500 border border-white shadow-sm"></div>
-             <span>Optimizado (Viable)</span>
-           </div>
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 rounded-full bg-amber-500 border border-white shadow-sm"></div>
-             <span>Alerta Gentrificación</span>
-           </div>
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 rounded-full bg-blue-300 border border-white shadow-sm"></div>
-             <span>Norma Vigente</span>
-           </div>
+           {activeLayers.poligonos && (
+             <>
+               <div className="flex items-center gap-2">
+                 <div className="w-3 h-3 rounded-full bg-red-500 border border-white shadow-sm"></div>
+                 <span>Bloqueo Normativo</span>
+               </div>
+               <div className="flex items-center gap-2">
+                 <div className="w-3 h-3 rounded-full bg-emerald-500 border border-white shadow-sm"></div>
+                 <span>Optimizado (Viable)</span>
+               </div>
+               <div className="flex items-center gap-2">
+                 <div className="w-3 h-3 rounded-full bg-amber-500 border border-white shadow-sm"></div>
+                 <span>Alerta Gentrificación</span>
+               </div>
+               <div className="flex items-center gap-2">
+                 <div className="w-3 h-3 rounded-full bg-blue-300 border border-white shadow-sm"></div>
+                 <span>Norma Vigente</span>
+               </div>
+             </>
+           )}
+           {activeLayers.riesgo && (
+             <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100">
+               <div className="w-3 h-3 bg-red-100 border border-red-300" style={{backgroundImage: 'linear-gradient(45deg, #fca5a5 25%, transparent 25%, transparent 50%, #fca5a5 50%, #fca5a5 75%, transparent 75%, transparent)', backgroundSize: '4px 4px'}}></div>
+               <span>Amenaza Alta</span>
+             </div>
+           )}
+           {activeLayers.expansion && (
+             <div className="flex items-center gap-2">
+               <div className="w-3 h-3 bg-blue-50 border border-blue-300 flex items-center justify-center">
+                 <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
+               </div>
+               <span>Suelo de Expansión</span>
+             </div>
+           )}
          </div>
       </div>
 
@@ -173,7 +230,7 @@ export const MapViz: React.FC<MapVizProps> = ({ data, zoneStatuses }) => {
       </div>
 
       {/* 5. Tooltip (Dynamic) */}
-      {hoveredZone && (
+      {hoveredZone && activeLayers.poligonos && (
         <div 
           className="absolute z-50 pointer-events-none"
           style={{ 

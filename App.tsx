@@ -45,12 +45,22 @@ const calculateViability = (zone: typeof INITIAL_ZONES[0], params: SimulationPar
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'layers' | 'simulation' | 'analysis'>('simulation');
+  const [activeTab, setActiveTab] = useState<'layers' | 'simulation' | 'analysis'>('layers');
   const [params, setParams] = useState<SimulationParams>({
     heightMultiplier: 1.0,
     removePlanParcial: false,
     socialHousingIncentive: false,
     constructionCostEfficiency: 0
+  });
+
+  // State for GIS Layers
+  const [activeLayers, setActiveLayers] = useState({
+    limiteMunicipal: true,
+    barrios: true,
+    hidrografia: true,
+    poligonos: true,
+    expansion: false,
+    riesgo: false
   });
 
   const [simulationResult, setSimulationResult] = useState<SimulationResult>({
@@ -117,6 +127,10 @@ export default function App() {
     setIsGeneratingReport(false);
   };
 
+  const toggleLayer = (layer: keyof typeof activeLayers) => {
+    setActiveLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
+  };
+
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-50 text-slate-800 font-sans overflow-hidden selection:bg-blue-100">
       
@@ -178,39 +192,78 @@ export default function App() {
           {/* Panel Content */}
           <div className="flex-1 overflow-y-auto custom-scrollbar p-5">
             
-            {/* Layers Tab (Mock) */}
+            {/* Layers Tab (Connected to State) */}
             {activeTab === 'layers' && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cartografía Base</h3>
-                  <label className="flex items-center gap-3 text-sm text-slate-700 hover:bg-slate-50 p-2 rounded -mx-2 cursor-pointer">
-                    <input type="checkbox" checked readOnly className="accent-blue-600 w-4 h-4 rounded border-slate-300" />
+                  <label className="flex items-center gap-3 text-sm text-slate-700 hover:bg-slate-50 p-2 rounded -mx-2 cursor-pointer transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={activeLayers.limiteMunicipal} 
+                      onChange={() => toggleLayer('limiteMunicipal')}
+                      className="accent-blue-600 w-4 h-4 rounded border-slate-300" 
+                    />
                     <span>Límite Municipal</span>
                   </label>
-                  <label className="flex items-center gap-3 text-sm text-slate-700 hover:bg-slate-50 p-2 rounded -mx-2 cursor-pointer">
-                    <input type="checkbox" checked readOnly className="accent-blue-600 w-4 h-4 rounded border-slate-300" />
+                  <label className="flex items-center gap-3 text-sm text-slate-700 hover:bg-slate-50 p-2 rounded -mx-2 cursor-pointer transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={activeLayers.barrios} 
+                      onChange={() => toggleLayer('barrios')}
+                      className="accent-blue-600 w-4 h-4 rounded border-slate-300" 
+                    />
                     <span>Barrios y Veredas</span>
                   </label>
-                  <label className="flex items-center gap-3 text-sm text-slate-700 hover:bg-slate-50 p-2 rounded -mx-2 cursor-pointer">
-                    <input type="checkbox" checked readOnly className="accent-blue-600 w-4 h-4 rounded border-slate-300" />
+                  <label className="flex items-center gap-3 text-sm text-slate-700 hover:bg-slate-50 p-2 rounded -mx-2 cursor-pointer transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={activeLayers.hidrografia} 
+                      onChange={() => toggleLayer('hidrografia')}
+                      className="accent-blue-600 w-4 h-4 rounded border-slate-300" 
+                    />
                     <span>Red Hídrica Principal</span>
                   </label>
                 </div>
                 
                 <div className="border-t border-slate-100 pt-5 space-y-3">
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Normativa POT</h3>
-                  <div className="flex items-center gap-2 text-sm text-blue-800 p-2 bg-blue-50 rounded border border-blue-100 font-medium">
-                    <Layers className="w-4 h-4" />
-                    <span>Polígonos de Tratamiento</span>
-                  </div>
-                  <label className="flex items-center gap-3 text-sm text-slate-700 ml-4 hover:bg-slate-50 p-2 rounded cursor-pointer">
-                    <input type="checkbox" className="accent-blue-600 w-4 h-4 rounded border-slate-300" />
+                  <label className="flex items-center gap-3 text-sm text-slate-700 hover:bg-slate-50 p-2 rounded -mx-2 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-2 flex-1">
+                      <input 
+                        type="checkbox" 
+                        checked={activeLayers.poligonos} 
+                        onChange={() => toggleLayer('poligonos')}
+                        className="accent-blue-600 w-4 h-4 rounded border-slate-300" 
+                      />
+                      <span className="font-medium text-blue-800">Polígonos de Tratamiento</span>
+                    </div>
+                    <Layers className="w-4 h-4 text-blue-400" />
+                  </label>
+                  
+                  <label className="flex items-center gap-3 text-sm text-slate-700 ml-4 hover:bg-slate-50 p-2 rounded cursor-pointer transition-colors border-l-2 border-transparent hover:border-slate-200">
+                    <input 
+                      type="checkbox" 
+                      checked={activeLayers.expansion} 
+                      onChange={() => toggleLayer('expansion')}
+                      className="accent-blue-600 w-4 h-4 rounded border-slate-300" 
+                    />
                     <span>Áreas de Expansión</span>
                   </label>
-                  <label className="flex items-center gap-3 text-sm text-slate-700 ml-4 hover:bg-slate-50 p-2 rounded cursor-pointer">
-                    <input type="checkbox" className="accent-blue-600 w-4 h-4 rounded border-slate-300" />
+                  
+                  <label className="flex items-center gap-3 text-sm text-slate-700 ml-4 hover:bg-slate-50 p-2 rounded cursor-pointer transition-colors border-l-2 border-transparent hover:border-slate-200">
+                    <input 
+                      type="checkbox" 
+                      checked={activeLayers.riesgo} 
+                      onChange={() => toggleLayer('riesgo')}
+                      className="accent-blue-600 w-4 h-4 rounded border-slate-300" 
+                    />
                     <span>Zonas de Riesgo</span>
                   </label>
+                </div>
+
+                <div className="bg-blue-50/50 p-3 rounded text-[10px] text-blue-800 border border-blue-100">
+                  <p>Las capas activas se renderizarán dinámicamente sobre la base cartográfica vectorial.</p>
                 </div>
               </div>
             )}
@@ -330,9 +383,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Map Area */}
+        {/* Map Area - Passing activeLayers state */}
         <main className="flex-1 relative bg-[#e2e8f0]">
-          <MapViz data={INITIAL_ZONES} zoneStatuses={zoneStatuses} />
+          <MapViz data={INITIAL_ZONES} zoneStatuses={zoneStatuses} activeLayers={activeLayers} />
         </main>
 
         {/* Report Modal */}
