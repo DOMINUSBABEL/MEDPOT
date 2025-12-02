@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UrbanZone, ZoneStatus } from '../types';
+import { Plus, Minus, Maximize, MousePointer2, Printer } from 'lucide-react';
 
 interface MapVizProps {
   data: UrbanZone[];
@@ -13,75 +14,69 @@ export const MapViz: React.FC<MapVizProps> = ({ data, zoneStatuses }) => {
   const getColor = (zoneId: string) => {
     const status = zoneStatuses.get(zoneId);
     switch (status) {
-      case ZoneStatus.LOCKED: return '#ef4444'; // Red-500 (Bloqueado)
-      case ZoneStatus.OPTIMIZED: return '#10b981'; // Emerald-500 (Optimizado)
-      case ZoneStatus.AT_RISK: return '#f59e0b'; // Amber-500 (Riesgo)
-      default: return '#3b82f6'; // Blue-500 (Viable)
+      case ZoneStatus.LOCKED: return '#ef4444'; // Red (Bloqueado)
+      case ZoneStatus.OPTIMIZED: return '#10b981'; // Emerald (Optimizado)
+      case ZoneStatus.AT_RISK: return '#f59e0b'; // Amber (Riesgo)
+      default: return '#93c5fd'; // Light Blue (Norma Vigente)
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent, zone: UrbanZone) => {
-    // Calculate position relative to viewport
+    const rect = (e.target as Element).getBoundingClientRect();
     setMousePos({
-      x: e.clientX,
-      y: e.clientY
+      x: rect.left + window.scrollX,
+      y: rect.top + window.scrollY - 100 // Offset upward
     });
     setHoveredZone(zone);
   };
 
   return (
-    <div className="w-full h-full bg-[#e2e8f0] relative overflow-hidden group">
-      {/* Background Texture - Technical Map Style */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-            backgroundImage: `linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(90deg, #94a3b8 1px, transparent 1px)`,
-            backgroundSize: '40px 40px'
-        }}
-      ></div>
-
-      {/* SVG Map Container */}
+    <div className="w-full h-full relative overflow-hidden bg-[#dfe6ed] group">
+      {/* 1. Map Canvas (SVG) */}
       <svg 
-        className="w-full h-full"
+        className="w-full h-full pointer-events-none md:pointer-events-auto"
         viewBox="0 0 100 100" 
         preserveAspectRatio="xMidYMid slice"
       >
         <defs>
-          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
-            <feOffset dx="0.5" dy="0.5" result="offsetblur"/>
-            <feFlood floodColor="rgba(0,0,0,0.2)"/>
-            <feComposite in2="offsetblur" operator="in"/>
-            <feMerge>
-              <feMergeNode/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
+          <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="0.5"/>
+          </pattern>
         </defs>
 
-        {/* Aburrá Valley Silhouette - Abstract Geography */}
-        <path 
-          d="M5,5 Q50,-10 95,5 L90,95 Q50,110 10,95 Z" 
-          fill="#cbd5e1" 
-          stroke="#94a3b8"
-          strokeWidth="0.5"
-        />
+        {/* Background Grid */}
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        {/* Aburrá Valley Geography (Stylized) */}
+        {/* Mountains (Side slopes) */}
+        <path d="M0,0 L30,0 L20,30 L0,50 Z" fill="#cbd5e1" opacity="0.3" />
+        <path d="M70,0 L100,0 L100,60 L80,40 Z" fill="#cbd5e1" opacity="0.3" />
+        <path d="M0,80 L20,100 L0,100 Z" fill="#cbd5e1" opacity="0.3" />
         
-        {/* River Medellín */}
-        <path
-          d="M30,95 Q48,55 52,45 T65,5"
-          fill="none"
-          stroke="#3b82f6"
-          strokeWidth="1.2"
+        {/* River Medellín (South to North) */}
+        <path 
+          d="M60,105 C55,80 58,60 50,45 S40,20 45,-5" 
+          fill="none" 
+          stroke="#93c5fd" 
+          strokeWidth="3"
           strokeLinecap="round"
-          strokeOpacity="0.4"
         />
 
-        {/* Zones rendered as Technical Polygons */}
+        {/* Main Highway (Regional) */}
+        <path 
+          d="M62,105 C57,80 60,60 52,45 S42,20 47,-5" 
+          fill="none" 
+          stroke="#ffffff" 
+          strokeWidth="1.5"
+          opacity="0.6"
+        />
+
+        {/* Zones (Data Points) */}
         {data.map((zone) => {
           const color = getColor(zone.id);
           const status = zoneStatuses.get(zone.id);
           const isOptimized = status === ZoneStatus.OPTIMIZED;
+          const isLocked = status === ZoneStatus.LOCKED;
           const isHovered = hoveredZone?.id === zone.id;
           
           return (
@@ -89,71 +84,123 @@ export const MapViz: React.FC<MapVizProps> = ({ data, zoneStatuses }) => {
               key={zone.id} 
               onMouseEnter={(e) => handleMouseMove(e as any, zone)}
               onMouseLeave={() => setHoveredZone(null)}
-              className="cursor-pointer"
+              className="cursor-pointer pointer-events-auto"
+              style={{ transition: 'all 0.3s ease' }}
             >
-              {/* Simulation of a polygon shape around the point */}
+              {/* Outer Glow for specific statuses */}
+              {isOptimized && (
+                <circle cx={zone.coordinates.x} cy={zone.coordinates.y} r={4} fill={color} opacity="0.2" className="animate-pulse" />
+              )}
+              {isLocked && (
+                <circle cx={zone.coordinates.x} cy={zone.coordinates.y} r={3.5} fill={color} opacity="0.1" />
+              )}
+
+              {/* Main Zone Marker */}
               <circle
                 cx={zone.coordinates.x}
                 cy={zone.coordinates.y}
-                r={isOptimized ? 3.5 : 2.5}
-                fill={color}
-                fillOpacity={isOptimized ? 0.3 : 0.2}
-                stroke={color}
-                strokeWidth={0.1}
-              />
-              
-              {/* Core Centroid */}
-              <circle
-                cx={zone.coordinates.x}
-                cy={zone.coordinates.y}
-                r={isHovered ? 1.2 : 0.8}
+                r={isHovered ? 2 : 1.5}
                 fill={color}
                 stroke="white"
-                strokeWidth="0.2"
-                filter="url(#shadow)"
+                strokeWidth="0.3"
+                opacity="0.8"
                 className="transition-all duration-300"
+              />
+              
+              {/* Center Dot */}
+              <circle
+                cx={zone.coordinates.x}
+                cy={zone.coordinates.y}
+                r={0.4}
+                fill="white"
+                opacity="0.5"
               />
             </g>
           );
         })}
       </svg>
 
-      {/* Map Scale & Info (Bottom Right) */}
-      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur border border-slate-300 px-3 py-1 text-[10px] text-slate-600 font-mono shadow-sm rounded pointer-events-none">
+      {/* 2. Map Controls (Right Side) */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2">
+        <div className="bg-white border border-slate-300 rounded-md shadow-sm flex flex-col overflow-hidden">
+          <button className="p-2 hover:bg-slate-50 border-b border-slate-200 text-slate-600 transition-colors" title="Acercar">
+            <Plus className="w-5 h-5" />
+          </button>
+          <button className="p-2 hover:bg-slate-50 border-b border-slate-200 text-slate-600 transition-colors" title="Alejar">
+            <Minus className="w-5 h-5" />
+          </button>
+          <button className="p-2 hover:bg-slate-50 text-slate-600 transition-colors" title="Ver Todo">
+            <Maximize className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="bg-white border border-slate-300 rounded-md shadow-sm p-2 cursor-pointer hover:bg-slate-50 text-slate-600" title="Identificar">
+          <MousePointer2 className="w-5 h-5" />
+        </div>
+        
+        <div className="bg-white border border-slate-300 rounded-md shadow-sm p-2 cursor-pointer hover:bg-slate-50 text-slate-600" title="Imprimir">
+          <Printer className="w-5 h-5" />
+        </div>
+      </div>
+
+      {/* 3. Legend (Bottom Left) */}
+      <div className="absolute bottom-10 left-4 bg-white/95 backdrop-blur-sm border border-slate-300 p-3 rounded-md shadow-md">
+         <h4 className="font-bold text-xs text-slate-800 mb-2 border-b border-slate-100 pb-1">Convenciones</h4>
+         <div className="space-y-2 text-xs text-slate-600">
+           <div className="flex items-center gap-2">
+             <div className="w-3 h-3 rounded-full bg-red-500 border border-white shadow-sm"></div>
+             <span>Bloqueo Normativo</span>
+           </div>
+           <div className="flex items-center gap-2">
+             <div className="w-3 h-3 rounded-full bg-emerald-500 border border-white shadow-sm"></div>
+             <span>Optimizado (Viable)</span>
+           </div>
+           <div className="flex items-center gap-2">
+             <div className="w-3 h-3 rounded-full bg-amber-500 border border-white shadow-sm"></div>
+             <span>Alerta Gentrificación</span>
+           </div>
+           <div className="flex items-center gap-2">
+             <div className="w-3 h-3 rounded-full bg-blue-300 border border-white shadow-sm"></div>
+             <span>Norma Vigente</span>
+           </div>
+         </div>
+      </div>
+
+      {/* 4. Scale Bar (Bottom Right) */}
+      <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur border border-slate-300 px-3 py-1 text-[10px] text-slate-600 font-mono shadow-sm rounded pointer-events-none">
         <div>Escala 1:10,000</div>
         <div>EPSG:3116 | MAGNA-SIRGAS / Colombia Bogota</div>
       </div>
 
-      {/* Floating Tooltip - GIS Identify Style */}
+      {/* 5. Tooltip (Dynamic) */}
       {hoveredZone && (
         <div 
-          className="fixed z-[100] pointer-events-none transform translate-x-4 -translate-y-4"
-          style={{ left: mousePos.x, top: mousePos.y }}
+          className="absolute z-50 pointer-events-none"
+          style={{ 
+            left: `${hoveredZone.coordinates.x}%`, 
+            top: `${hoveredZone.coordinates.y}%`,
+            transform: 'translate(10px, -50%)' 
+          }}
         >
-          <div className="bg-white border border-slate-300 text-slate-800 p-0 rounded shadow-xl text-xs w-64 overflow-hidden">
-            <div className="bg-slate-100 px-3 py-2 border-b border-slate-200 flex justify-between items-center">
-               <span className="font-bold text-slate-700">{hoveredZone.name}</span>
-               <span className="font-mono text-[10px] text-slate-500">{hoveredZone.id}</span>
+          <div className="bg-white border border-slate-300 text-slate-800 rounded shadow-xl text-xs w-56 overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 flex justify-between items-center">
+               <span className="font-bold text-slate-700 truncate">{hoveredZone.name}</span>
             </div>
             <div className="p-3 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                  <div>
-                    <span className="block text-[10px] text-slate-500">Norma Actual</span>
-                    <span className="font-medium">{hoveredZone.currentHeight} Pisos</span>
+                    <span className="block text-[10px] text-slate-400 uppercase">Alturas</span>
+                    <span className="font-medium text-slate-800">{hoveredZone.currentHeight} Pisos</span>
                  </div>
                  <div>
-                    <span className="block text-[10px] text-slate-500">Plan Parcial</span>
-                    <span className={`font-medium ${hoveredZone.planParcialRequired ? 'text-red-600' : 'text-slate-700'}`}>
-                        {hoveredZone.planParcialRequired ? 'Requerido' : 'No Aplica'}
+                    <span className="block text-[10px] text-slate-400 uppercase">Plan Parcial</span>
+                    <span className={`font-medium ${hoveredZone.planParcialRequired ? 'text-red-600' : 'text-slate-500'}`}>
+                        {hoveredZone.planParcialRequired ? 'Sí' : 'No'}
                     </span>
                  </div>
-                 <div>
-                    <span className="block text-[10px] text-slate-500">Valor Suelo / m²</span>
-                    <span className="font-mono">${(hoveredZone.landValue/1000000).toFixed(1)}M</span>
-                 </div>
-                 <div>
-                    <span className="block text-[10px] text-slate-500">Índice Airbnb</span>
-                    <span className="font-mono">{hoveredZone.touristPressure.toFixed(0)} / 100</span>
+                 <div className="col-span-2 border-t border-slate-100 pt-1 mt-1">
+                    <span className="block text-[10px] text-slate-400 uppercase">Valor Suelo</span>
+                    <span className="font-mono text-slate-700">${(hoveredZone.landValue/1000000).toFixed(1)}M / m²</span>
                  </div>
               </div>
             </div>
