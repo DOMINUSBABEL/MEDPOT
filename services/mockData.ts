@@ -7,51 +7,56 @@ export const generateUrbanData = (): UrbanZone[] => {
   // Coordinates are calibrated for a 100x100 grid where:
   // 0,0 is Top-Left (North-West)
   // 100,100 is Bottom-Right (South-East)
-  // Medellín River flows approx from South (80,100) to North (40,0)
   
-  const communes = [
-    // El Poblado (South East) - Expensive, High Income
-    { name: 'El Poblado', code: 'Z3_CN1', baseX: 70, baseY: 70, landValue: 8000000, income: 12000000, tourist: 95, height: 20 },
-    // Laureles (Central West) - Planned, High Value
-    { name: 'Laureles', code: 'Z4_R_10', baseX: 40, baseY: 50, landValue: 6000000, income: 7000000, tourist: 70, height: 12 },
-    // Belén (South West) - Mixed
-    { name: 'Belén', code: 'Z5_M_2', baseX: 30, baseY: 70, landValue: 4500000, income: 4500000, tourist: 40, height: 8 },
-    // La Candelaria (Center) - High Density, Commercial
-    { name: 'La Candelaria', code: 'Z1_CN2', baseX: 55, baseY: 45, landValue: 5500000, income: 3500000, tourist: 30, height: 15 },
-    // Robledo (North West) - Residential, Hilly
-    { name: 'Robledo', code: 'Z7_R_5', baseX: 25, baseY: 30, landValue: 2500000, income: 2500000, tourist: 10, height: 5 },
-    // Aranjuez (North East) - Traditional
-    { name: 'Aranjuez', code: 'Z2_R_8', baseX: 65, baseY: 25, landValue: 3000000, income: 2800000, tourist: 15, height: 4 },
+  // Based on Macroproyectos from Acuerdo 48 de 2014
+  const macroproyectos = [
+    // Macroproyecto Río Sur (El Poblado / Guayabal) - Z3_CN1 (Consolidación Nivel 1)
+    { name: 'Macroproyecto Río Sur', code: 'Z3_CN1', baseX: 70, baseY: 70, landValue: 8000000, income: 12000000, tourist: 95, height: 20 },
+    
+    // Macroproyecto Río Centro (La Candelaria / Centro) - Z1_RED (Redesarrollo)
+    { name: 'Macroproyecto Río Centro', code: 'Z1_RED', baseX: 55, baseY: 45, landValue: 5500000, income: 3500000, tourist: 30, height: 15 },
+    
+    // Macroproyecto Transversal (Laureles / Estadio) - Z4_CN2 (Consolidación Nivel 2)
+    { name: 'Macroproyecto Transversal', code: 'Z4_CN2', baseX: 40, baseY: 50, landValue: 6000000, income: 7000000, tourist: 70, height: 12 },
+    
+    // Macroproyecto Bordes Occidental (Belén / Altavista) - Z5_M (Mejoramiento Integral)
+    { name: 'Borde Occidental', code: 'Z5_MI', baseX: 30, baseY: 70, landValue: 4500000, income: 4500000, tourist: 40, height: 8 },
+    
+    // Macroproyecto Bordes Norte (Robledo / Doce de Octubre) - Z7_MI (Mejoramiento)
+    { name: 'Borde Norte', code: 'Z7_MI', baseX: 25, baseY: 30, landValue: 2500000, income: 2500000, tourist: 10, height: 5 },
+    
+    // Aranjuez / Manrique - Z2_C (Consolidación)
+    { name: 'Zona Nororiental', code: 'Z2_CN3', baseX: 65, baseY: 25, landValue: 3000000, income: 2800000, tourist: 15, height: 4 },
   ];
 
   let idCounter = 0;
 
-  communes.forEach((commune) => {
+  macroproyectos.forEach((macro) => {
     // Generate micro-polygons per commune
     for (let i = 0; i < 15; i++) {
-      const isPlanParcial = Math.random() > 0.65; // 35% chance of requiring Partial Plan
-      const subCode = `${commune.code}_${Math.floor(Math.random() * 90) + 10}`;
+      // In POT 48, expansion and renovation zones often require Partial Plans
+      const isPlanParcial = Math.random() > 0.60; 
+      const subCode = `${macro.code}_${Math.floor(Math.random() * 900) + 100}`;
       
-      // Add randomness but keep clustered around base
       const scatterX = (Math.random() * 14 - 7);
       const scatterY = (Math.random() * 14 - 7);
 
       data.push({
         id: subCode,
         name: `Polígono ${subCode}`,
-        commune: commune.name,
+        commune: macro.name,
         coordinates: {
-          x: Math.max(5, Math.min(95, commune.baseX + scatterX)),
-          y: Math.max(5, Math.min(95, commune.baseY + scatterY)),
+          x: Math.max(5, Math.min(95, macro.baseX + scatterX)),
+          y: Math.max(5, Math.min(95, macro.baseY + scatterY)),
         },
-        currentHeight: Math.floor(Math.random() * commune.height) + 1,
-        maxAllowedHeight: commune.height, // Initial constraint
-        landValue: commune.landValue * (0.9 + Math.random() * 0.2),
-        constructionCost: 3800000, // Updated 2024 cost
+        currentHeight: Math.floor(Math.random() * macro.height) + 1,
+        maxAllowedHeight: macro.height,
+        landValue: macro.landValue * (0.9 + Math.random() * 0.2),
+        constructionCost: 3800000, 
         planParcialRequired: isPlanParcial,
-        avgRentPrice: (commune.landValue * 0.005) + (Math.random() * 500000),
-        incomeLevel: commune.income,
-        touristPressure: commune.tourist + (Math.random() * 10 - 5),
+        avgRentPrice: (macro.landValue * 0.005) + (Math.random() * 500000),
+        incomeLevel: macro.income,
+        touristPressure: macro.tourist + (Math.random() * 10 - 5),
       });
     }
   });
